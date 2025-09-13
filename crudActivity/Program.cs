@@ -1,25 +1,38 @@
+﻿using crudActivity.Dtos;
+using crudActivity.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Config
+builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mongo"));
+builder.Services.AddSingleton<MongoContext>();
+builder.Services.AddSingleton<ActivityRepository>();
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FE", p =>
+        p.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
+         .AllowAnyHeader()
+         .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseCors("FE");
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
 app.MapControllers();
+
+// --- Seed (กดครั้งแรกมีข้อมูล mock) ---
+await crudActivity.Seed.SeedData.RunAsync(app.Services);
 
 app.Run();
